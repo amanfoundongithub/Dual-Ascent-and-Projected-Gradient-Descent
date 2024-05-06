@@ -31,6 +31,7 @@ def main():
                 print(
                     f"Test function was {test_case[0].__name__} with {test_case[2]} as starting point"
                 )
+                print(f"C: {test_case[3]}")
                 row += [None]
             else:
                 row += [np.round(ans, 3)]
