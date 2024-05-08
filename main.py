@@ -76,6 +76,8 @@ def main():
                 f"Test function was {test_case[0].__name__} with {test_case[2]} as starting point"
             )
             print(e)
+            print(e.with_traceback())
+            exit(0) 
             row += [None]
         DA_table.add_row(row, divider=test_case_num in dividers)
 

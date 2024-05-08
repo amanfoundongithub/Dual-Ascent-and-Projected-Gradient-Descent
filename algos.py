@@ -52,18 +52,19 @@ def get_projected_step_size(initial_point: npt.NDArray[np.float64],
     
     x = initial_point
 
-    beta = 0.05
+    beta = 0.9
 
-    tk = 0.75
+    tk = 1
+    
+    c = 0.001
 
     while True: 
         f_diff = f(x) - f(Pc(constraints, x - tk * d_f(x), constraint_type))
 
-        proj_gradient = tk * np.linalg.norm(G(x, d_f, constraint_type, constraints,
+        proj_gradient = c * tk * np.linalg.norm(G(x, d_f, constraint_type, constraints,
                                               m = 1/tk))**2
     
-    
-        if abs(f_diff - proj_gradient) < 1e-3:
+        if f_diff - proj_gradient >= 0:
             return tk 
         else:
             tk = tk * beta
@@ -77,7 +78,7 @@ def projected_gd(
     constraint_type: Literal["linear", "l_2"],
     constraints: npt.NDArray[np.float64] | tuple[npt.NDArray[np.float64], np.float64]
 ) -> npt.NDArray[np.float64]:
-    tolerance = 1e-10
+    tolerance = 1e-6
     
     x = point 
 
@@ -99,9 +100,31 @@ def projected_gd(
         else: 
             k += 1 
             x = x_new
-        
-     
     return x
+
+def d_L(d_f : Callable[[npt.NDArray[np.float64]], npt.NDArray[np.float64]], 
+        c : list[Callable[[npt.NDArray[np.float64]], np.float64 | float]],
+        d_c : list[Callable[[npt.NDArray[np.float64]], npt.NDArray[np.float64]]], 
+        x   : npt.NDArray[np.float64], 
+        lam : npt.NDArray[np.float64],
+        x_derivative = True):
+    
+    if x_derivative == True:
+        constraint_der = np.zeros(shape = (x.shape[0],))
+        
+        for i in range(lam.shape[0]):
+            constraint_der += lam[i] * d_c[i](x) 
+        
+        
+        return d_f(x) + constraint_der
+    
+    else: 
+        constraint_der = np.zeros(shape = (lam.shape[0],))
+        for i in range(constraint_der.shape[0]):
+            constraint_der[i] = c[i](x) 
+        
+        return constraint_der
+    
 
 def dual_ascent(
     f: Callable[[npt.NDArray[np.float64]], np.float64 | float],
@@ -111,5 +134,30 @@ def dual_ascent(
     initial_point: npt.NDArray[np.float64],
 ) -> npt.NDArray[np.float64]:
     
-    pass
+    # Implement this scheme 
+    no_of_constraints = len(c)
+
+    # Initialize all lambdas to 1 
+    lam = np.ones(shape = (no_of_constraints, ))
+    zer = np.zeros(shape = (no_of_constraints, ))
+
+    alpha = 1e-2
+    k     = 0
+
+    x = initial_point 
+
+    while k < 1e5:
+        d_value = d_L(d_f, c,d_c, x, lam, x_derivative = True) 
+
+        x = x - alpha * d_value
+
+        d_value = d_L(d_f, c, d_c, x, lam, x_derivative = False)    
+
+        lam = lam + alpha * d_value
+
+        k   = k + 1
+
+        lam = np.maximum(zer, lam)
+    
+    return (x, lam)
 
